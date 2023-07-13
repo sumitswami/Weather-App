@@ -1,6 +1,6 @@
 package com.example.weatherapp
 
-data class  Example(
+data class   Example(
     val base: String,
     val clouds: Clouds,
     val cod: Int,

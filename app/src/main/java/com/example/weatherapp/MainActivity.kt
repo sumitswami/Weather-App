@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -23,6 +25,7 @@ const val BASE_URL = "https://api.openweathermap.org/data/2.5/"
 @Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity() {
      lateinit var db:TempDataBase
+     lateinit var cardAdapter:Adapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,6 +34,9 @@ class MainActivity : AppCompatActivity() {
        /* database = Room.databaseBuilder(applicationContext,
             TempDatabase::class.java,
             "temperatureTable ").build()*/
+        val x = findViewById<RecyclerView>(R.id.itemList)
+
+        val description: List<String> = listOf("Sunrise","Sunset","Wind","Pressure","Humidity","Feels like")
 
         val updtdAt = "Updated at: "
 
@@ -39,10 +45,6 @@ class MainActivity : AppCompatActivity() {
             .baseUrl(BASE_URL)
             .build()
             .create(ApiInterface::class.java)
-
-       /*
-        }*/
-
 
         db = TempDataBase.getDatbase(this)
 
@@ -72,12 +74,23 @@ class MainActivity : AppCompatActivity() {
                     findViewById<TextView>(R.id.temp_max).text = responseBody.main.temp_max.toString()
                     val sunrise:Long = responseBody.sys.sunrise
                     val sunset:Long = responseBody.sys.sunset
-                    findViewById<TextView>(R.id.sunrise).text = SimpleDateFormat("hh:mm a",Locale.ENGLISH).format(Date(sunrise*1000))
+
+                    val descriptionObjects : MutableList<CardDescription> = mutableListOf<CardDescription>()
+                    descriptionObjects.add(CardDescription("Sunrise",SimpleDateFormat("hh:mm a",Locale.ENGLISH).format(Date(sunrise*1000))))
+                    descriptionObjects.add(CardDescription("Sunset",SimpleDateFormat("hh:mm a",Locale.ENGLISH).format(Date(sunset*1000))))
+                    descriptionObjects.add(CardDescription("humidity",responseBody.main.humidity.toString()))
+                    descriptionObjects.add(CardDescription("Pressure",responseBody.main.pressure.toString()))
+                    descriptionObjects.add(CardDescription("Wind",responseBody.wind.speed.toString()))
+                    descriptionObjects.add(CardDescription("Feels Like",responseBody.main.feels_like.toString()))
+
+                    x.adapter = Adapter(descriptionObjects)
+                    x.layoutManager = LinearLayoutManager(this@MainActivity ,LinearLayoutManager.HORIZONTAL,false)
+                    /*findViewById<TextView>(R.id.sunrise).text = SimpleDateFormat("hh:mm a",Locale.ENGLISH).format(Date(sunrise*1000))
                     findViewById<TextView>(R.id.sunset).text = SimpleDateFormat("hh:mm a",Locale.ENGLISH).format(Date(sunset*1000))
                     findViewById<TextView>(R.id.wind).text = responseBody.wind.speed.toString()
                     findViewById<TextView>(R.id.pressure).text = responseBody.main.pressure.toString()
                     findViewById<TextView>(R.id.humidity).text = responseBody.main.humidity.toString()
-                    findViewById<TextView>(R.id.feelslike).text = responseBody.main.feels_like.toString()
+                    findViewById<TextView>(R.id.feelslike).text = responseBody.main.feels_like.toString()*/
 
                     GlobalScope.launch {
                         db.tempDao().insertData(Temp(dateString,responseBody.main.temp_min,responseBody.main.temp_max,responseBody.main.humidity))
