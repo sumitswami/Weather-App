@@ -2,49 +2,45 @@ package com.example.weatherapp
 
 import android.os.Bundle
 import android.util.Log
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import androidx.room.Room
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.weatherapp.databinding.ActivityMainBinding
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import java.text.SimpleDateFormat
 import java.util.*
 
 
 const val BASE_URL = "https://api.openweathermap.org/data/2.5/"
-
 @Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityMainBinding
      lateinit var db:TempDataBase
      lateinit var cardAdapter:Adapter
+     lateinit var mainViewModel: MainViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater) //initializing the binding class
+        setContentView(binding.root)
+
 
        /* database = Room.databaseBuilder(applicationContext,
             TempDatabase::class.java,
             "temperatureTable ").build()*/
-        val x = findViewById<RecyclerView>(R.id.itemList)
 
-        val description: List<String> = listOf("Sunrise","Sunset","Wind","Pressure","Humidity","Feels like")
 
         val updtdAt = "Updated at: "
 
-        val retrofit = Retrofit.Builder()
+       /* val retrofit = Retrofit.Builder()
             .addConverterFactory(GsonConverterFactory.create())
             .baseUrl(BASE_URL)
             .build()
-            .create(ApiInterface::class.java)
+            .create(ApiInterface::class.java)*/
 
         db = TempDataBase.getDatbase(this)
 
@@ -55,23 +51,27 @@ class MainActivity : AppCompatActivity() {
         Log.d("logtesting","log12345")
 
 
+        val result = RetrofitHelper.getInstance().create(ApiInterface::class.java)
+        val repository = Repository(db,result)
+        val response = result.getWeatherData("Bangalore", "8118ed6ee68db2debfaaa5a44c832918" , "metric")
 
-        val response = retrofit.getWeatherData("Bangalore", "8118ed6ee68db2debfaaa5a44c832918" , "metric")
+
+        mainViewModel = ViewModelProvider(this,MainViewModelFactory(repository)).get(MainViewModel::class.java)
 
         response.enqueue(object : Callback<Example> {
             override fun onResponse(call: Call<Example>, response: Response<Example>) {
                 val responseBody = response.body()
 
                 if (responseBody != null) {
-                    findViewById<TextView>(R.id.temp).text = responseBody.main.temp.toString()
-                    findViewById<TextView>(R.id.address).text = responseBody.name
+                    binding.temp.text = responseBody.main.temp.toString()
+                    binding.address.text = responseBody.name
                     val updatedAt:Long = responseBody.dt
                     val dateString = SimpleDateFormat("dd/MM/yyyy hh:mm a",
                         Locale.ENGLISH).format(Date(updatedAt*1000))
-                    findViewById<TextView>(R.id.updated_at).text = updtdAt + dateString
-                    findViewById<TextView>(R.id.status).text = responseBody.weather[0].description
-                    findViewById<TextView>(R.id.temp_min).text = responseBody.main.temp_min.toString()
-                    findViewById<TextView>(R.id.temp_max).text = responseBody.main.temp_max.toString()
+                    binding.updatedat.text = updtdAt + dateString
+                    binding.status.text = responseBody.weather[0].description
+                    binding.tempmin.text = responseBody.main.temp_min.toString()
+                    binding.tempmax.text = responseBody.main.temp_max.toString()
                     val sunrise:Long = responseBody.sys.sunrise
                     val sunset:Long = responseBody.sys.sunset
 
@@ -83,8 +83,8 @@ class MainActivity : AppCompatActivity() {
                     descriptionObjects.add(CardDescription("Wind",responseBody.wind.speed.toString()))
                     descriptionObjects.add(CardDescription("Feels Like",responseBody.main.feels_like.toString()))
 
-                    x.adapter = Adapter(descriptionObjects)
-                    x.layoutManager = LinearLayoutManager(this@MainActivity ,LinearLayoutManager.HORIZONTAL,false)
+                    binding.itemList.adapter = Adapter(descriptionObjects)
+                    binding.itemList.layoutManager = LinearLayoutManager(this@MainActivity ,LinearLayoutManager.HORIZONTAL,false)
                     /*findViewById<TextView>(R.id.sunrise).text = SimpleDateFormat("hh:mm a",Locale.ENGLISH).format(Date(sunrise*1000))
                     findViewById<TextView>(R.id.sunset).text = SimpleDateFormat("hh:mm a",Locale.ENGLISH).format(Date(sunset*1000))
                     findViewById<TextView>(R.id.wind).text = responseBody.wind.speed.toString()
